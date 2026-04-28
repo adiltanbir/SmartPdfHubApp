@@ -13,9 +13,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
-
+          
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.2 # This matches the version in your project files
 
       - name: Build APK
         run: gradle assembleDebug
