@@ -40,18 +40,23 @@ class PDFViewModel @Inject constructor(
     ) { query, sort, filter ->
         Triple(query, sort, filter)
     }.flatMapLatest { (query, sort, filter) ->
-        _isLoading.value = true
-        try {
-            val flow = when {
-                query.isNotBlank() -> repository.searchPDFs(query, sort)
-                filter != null -> repository.filterBySource(filter)
-                else -> repository.getAllPDFs(sort)
+        flow {
+            _isLoading.postValue(true)
+            try {
+                val flow = when {
+                    query.isNotBlank() -> repository.searchPDFs(query, sort)
+                    filter != null -> repository.filterBySource(filter)
+                    else -> repository.getAllPDFs(sort)
+                }
+                flow.collect { list ->
+                    _isLoading.postValue(false)
+                    emit(list)
+                }
+            } catch (e: Exception) {
+                _error.postValue(e.message)
+                _isLoading.postValue(false)
+                emit(emptyList())
             }
-            flow.onEach { _isLoading.value = false }
-        } catch (e: Exception) {
-            _error.value = e.message
-            _isLoading.value = false
-            flowOf(emptyList())
         }
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
@@ -73,6 +78,10 @@ class PDFViewModel @Inject constructor(
         viewModelScope.launch { repository.markAsOpened(pdf) }
     }
 
-    fun refresh() { _sortOption.value = _sortOption.value }
-    fun clearError() { _error.value = null }
+    fun refresh() { 
+        val current = _sortOption.value
+        _sortOption.value = current 
+    }
+    
+    fun clearError() { _error.postValue(null) }
 }
