@@ -8,6 +8,7 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.button.MaterialButton
 import com.google.android.material.card.MaterialCardView
+import com.google.android.material.chip.Chip  // BUG FIX #10: tvSource is a Chip in the layout, not a MaterialTextView
 import com.google.android.material.textview.MaterialTextView
 import com.smartpdfhub.R
 import com.smartpdfhub.data.model.PDFFile
@@ -33,7 +34,8 @@ class PDFAdapter(
         private val tvName: MaterialTextView = itemView.findViewById(R.id.tvFileName)
         private val tvSize: MaterialTextView = itemView.findViewById(R.id.tvFileSize)
         private val tvDate: MaterialTextView = itemView.findViewById(R.id.tvDate)
-        private val tvSource: MaterialTextView = itemView.findViewById(R.id.tvSource)
+        // BUG FIX #10: item_pdf.xml uses Chip for tvSource, not MaterialTextView — caused ClassCastException
+        private val tvSource: Chip = itemView.findViewById(R.id.tvSource)
         private val btnFavorite: MaterialButton = itemView.findViewById(R.id.btnFavorite)
         private val btnShare: MaterialButton = itemView.findViewById(R.id.btnShare)
 
@@ -44,7 +46,7 @@ class PDFAdapter(
             tvSource.text = pdf.sourceType.displayName
 
             btnFavorite.icon = itemView.context.getDrawable(
-                if (pdf.isFavorite) R.drawable.ic_favorite_filled 
+                if (pdf.isFavorite) R.drawable.ic_favorite_filled
                 else R.drawable.ic_favorite_border
             )
 
