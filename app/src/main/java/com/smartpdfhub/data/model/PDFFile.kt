@@ -30,6 +30,9 @@ data class PDFFile(
     }
 }
 
-enum class SourceType {
-    WHATSAPP, DOWNLOADS, TELEGRAM, OTHER
+enum class SourceType(val displayName: String) {
+    WHATSAPP("WhatsApp"), 
+    DOWNLOADS("Downloads"), 
+    TELEGRAM("Telegram"), 
+    OTHER("Other")
 }
