@@ -22,50 +22,39 @@ class PDFViewModel @Inject constructor(
 
     private val _sortOption = MutableStateFlow(SortOption.RECENT)
     val sortOption: StateFlow<SortOption> = _sortOption.asStateFlow()
-    
+
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
-    
+
     private val _isLoading = MutableLiveData(false)
     val isLoading: LiveData<Boolean> = _isLoading
-    
+
     private val _error = MutableLiveData<String?>(null)
     val error: LiveData<String?> = _error
-    
+
     private val _selectedFilter = MutableStateFlow<SourceType?>(null)
 
+    // BUG FIX #7 & #8: pdfList now correctly combines the DB flow with search/sort/filter
+    // Previously: repository methods were never connected to dataSource, and filter/sort were no-ops
     val pdfList: StateFlow<List<PDFFile>> = combine(
+        repository.allPDFs,
         _searchQuery.debounce(300),
         _sortOption,
         _selectedFilter
-    ) { query, sort, filter ->
-        Triple(query, sort, filter)
-    }.flatMapLatest { (query, sort, filter) ->
-        flow {
-            _isLoading.postValue(true)
-            try {
-                val flow = when {
-                    query.isNotBlank() -> repository.searchPDFs(query, sort)
-                    filter != null -> repository.filterBySource(filter)
-                    else -> repository.getAllPDFs(sort)
-                }
-                flow.collect { list ->
-                    _isLoading.postValue(false)
-                    emit(list)
-                }
-            } catch (e: Exception) {
-                _error.postValue(e.message)
-                _isLoading.postValue(false)
-                emit(emptyList())
+    ) { pdfs, query, sort, filter ->
+        pdfs
+            .filter { pdf ->
+                (query.isBlank() || pdf.displayName.contains(query, ignoreCase = true)) &&
+                (filter == null || pdf.sourceType == filter)
             }
-        }
-    }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+            .sortedWith(getSortComparator(sort))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val favorites = repository.getFavorites()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     val recentlyOpened = repository.getRecentlyOpened()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun setSearchQuery(query: String) { _searchQuery.value = query }
     fun setSortOption(option: SortOption) { _sortOption.value = option }
@@ -79,10 +68,29 @@ class PDFViewModel @Inject constructor(
         viewModelScope.launch { repository.markAsOpened(pdf) }
     }
 
-    fun refresh() { 
-        val current = _sortOption.value
-        _sortOption.value = current 
+    // BUG FIX #9: refresh() now actually calls repository.refresh() which scans device for PDFs
+    // Previously it just set the same StateFlow value — a complete no-op
+    fun refresh() {
+        viewModelScope.launch {
+            _isLoading.postValue(true)
+            try {
+                repository.refresh()
+            } catch (e: Exception) {
+                _error.postValue(e.message ?: "Failed to load PDFs")
+            } finally {
+                _isLoading.postValue(false)
+            }
+        }
     }
-    
+
     fun clearError() { _error.postValue(null) }
+
+    private fun getSortComparator(sort: SortOption): Comparator<PDFFile> = when (sort) {
+        SortOption.NAME_ASC, SortOption.NAME -> compareBy { it.displayName.lowercase() }
+        SortOption.NAME_DESC -> compareByDescending { it.displayName.lowercase() }
+        SortOption.SIZE_ASC, SortOption.SIZE -> compareBy { it.size }
+        SortOption.SIZE_DESC -> compareByDescending { it.size }
+        SortOption.DATE_ASC -> compareBy { it.lastModified }
+        SortOption.DATE_DESC, SortOption.DATE, SortOption.RECENT -> compareByDescending { it.lastModified }
+    }
 }
