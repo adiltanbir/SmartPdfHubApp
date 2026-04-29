@@ -6,15 +6,19 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface PDFDao {
-    @Query("SELECT * FROM pdf_files")
+    @Query("SELECT * FROM pdf_files ORDER BY lastModified DESC")
     fun getAllPDFs(): Flow<List<PDFFile>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(pdf: PDFFile)
 
+    // BUG FIX #4: Added insertAll() — Repository.refresh() needs bulk insert but this method was missing
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertAll(pdfs: List<PDFFile>)
+
     @Query("UPDATE pdf_files SET isFavorite = :isFavorite WHERE id = :id")
     suspend fun setFavorite(id: String, isFavorite: Boolean)
-    
+
     @Query("SELECT * FROM pdf_files WHERE isFavorite = 1")
     fun getFavorites(): Flow<List<PDFFile>>
 
