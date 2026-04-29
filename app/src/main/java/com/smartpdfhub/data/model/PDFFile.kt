@@ -16,7 +16,6 @@ data class PDFFile(
     val isFavorite: Boolean = false,
     val lastOpened: Long? = null
 ) {
-    // These "getters" fix the errors in your PDFAdapter
     val displayName: String get() = name
     
     val formattedSize: String get() {
