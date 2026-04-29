@@ -42,7 +42,7 @@ class PDFAdapter(
         fun bind(pdf: PDFFile) {
             tvName.text = pdf.displayName
             tvSize.text = pdf.formattedSize
-            tvDate.text = DateUtils.formatDate(pdf.lastModified)
+            tvDate.text = pdf.formattedDate
             tvSource.text = pdf.sourceType.displayName
 
             // Update favorite icon
