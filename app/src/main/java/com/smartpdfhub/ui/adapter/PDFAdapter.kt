@@ -1,4 +1,3 @@
-// app/src/main/java/com/smartpdfhub/ui/adapter/PDFAdapter.kt
 package com.smartpdfhub.ui.adapter
 
 import android.view.LayoutInflater
@@ -44,7 +43,6 @@ class PDFAdapter(
             tvDate.text = pdf.formattedDate
             tvSource.text = pdf.sourceType.displayName
 
-            // Update favorite icon
             btnFavorite.icon = itemView.context.getDrawable(
                 if (pdf.isFavorite) R.drawable.ic_favorite_filled 
                 else R.drawable.ic_favorite_border
@@ -57,12 +55,7 @@ class PDFAdapter(
     }
 
     class DiffCallback : DiffUtil.ItemCallback<PDFFile>() {
-        override fun areItemsTheSame(oldItem: PDFFile, newItem: PDFFile): Boolean {
-            return oldItem.id == newItem.id
-        }
-
-        override fun areContentsTheSame(oldItem: PDFFile, newItem: PDFFile): Boolean {
-            return oldItem == newItem
-        }
+        override fun areItemsTheSame(oldItem: PDFFile, newItem: PDFFile) = oldItem.id == newItem.id
+        override fun areContentsTheSame(oldItem: PDFFile, newItem: PDFFile) = oldItem == newItem
     }
 }
