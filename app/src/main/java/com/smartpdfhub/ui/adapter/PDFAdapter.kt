@@ -12,7 +12,6 @@ import com.google.android.material.card.MaterialCardView
 import com.google.android.material.textview.MaterialTextView
 import com.smartpdfhub.R
 import com.smartpdfhub.data.model.PDFFile
-import com.smartpdfhub.utils.DateUtils
 
 class PDFAdapter(
     private val onItemClick: (PDFFile) -> Unit,
