@@ -18,6 +18,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.content.FileProvider
 import androidx.core.view.isVisible
+import androidx.core.widget.doOnTextChanged  // BUG FIX #11: This import was missing — caused compile error
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
@@ -93,7 +94,6 @@ class MainActivity : AppCompatActivity() {
 
         fabSort.setOnClickListener { showSortDialog() }
 
-        // Setup dark mode toggle in toolbar menu
         toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.action_dark_mode -> toggleDarkMode()
@@ -131,7 +131,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Real-time search
+        // BUG FIX #11: doOnTextChanged now resolves correctly with the added import
         searchView.editText.doOnTextChanged { text, _, _, _ ->
             viewModel.setSearchQuery(text?.toString() ?: "")
         }
@@ -154,7 +154,6 @@ class MainActivity : AppCompatActivity() {
                 setOnCheckedChangeListener { _, isChecked ->
                     if (isChecked) {
                         viewModel.setFilter(type)
-                        // Uncheck others
                         for (i in 0 until chipGroup.childCount) {
                             if (chipGroup.getChildAt(i) != this) {
                                 (chipGroup.getChildAt(i) as Chip).isChecked = false
@@ -194,7 +193,6 @@ class MainActivity : AppCompatActivity() {
             loadPDFs()
         } else {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                // Android 11+ - Request MANAGE_EXTERNAL_STORAGE
                 val intent = Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION).apply {
                     data = Uri.parse("package:$packageName")
                 }
@@ -220,16 +218,11 @@ class MainActivity : AppCompatActivity() {
         try {
             val file = File(pdf.path)
             val uri = if (file.exists()) {
-                FileProvider.getUriForFile(
-                    this,
-                    "${packageName}.fileprovider",
-                    file
-                )
+                FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
             } else {
-                pdf.uri
+                Uri.parse(pdf.id)
             }
 
-            // Try Google Drive PDF Viewer first
             val driveIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/pdf")
                 setPackage("com.google.android.apps.docs")
@@ -237,7 +230,6 @@ class MainActivity : AppCompatActivity() {
                 addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
             }
 
-            // Fallback to generic PDF viewer with system chooser
             val genericIntent = Intent(Intent.ACTION_VIEW).apply {
                 setDataAndType(uri, "application/pdf")
                 addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
@@ -247,7 +239,6 @@ class MainActivity : AppCompatActivity() {
             try {
                 startActivity(driveIntent)
             } catch (e: ActivityNotFoundException) {
-                // Google Drive not installed, show chooser
                 val chooser = Intent.createChooser(genericIntent, "Open PDF with")
                 startActivity(chooser)
             }
@@ -262,7 +253,7 @@ class MainActivity : AppCompatActivity() {
             val uri = if (file.exists()) {
                 FileProvider.getUriForFile(this, "${packageName}.fileprovider", file)
             } else {
-                pdf.uri
+                Uri.parse(pdf.id)
             }
 
             val shareIntent = Intent(Intent.ACTION_SEND).apply {
